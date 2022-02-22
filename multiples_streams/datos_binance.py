@@ -6,13 +6,14 @@ import numpy as np
 from parametros_bot.sacar_datos_iniciales_multiple_streams2 import datos_inicio
 import telepot
 
-socket_tream,df_datos_iniciales,list_simbolos=datos_inicio(1,'15m') #las velas toca cambiar el tiempo desde el archivo
+socket_tream,df_datos_iniciales,list_simbolos=datos_inicio(2,'1m') #las velas toca cambiar el tiempo desde el archivo
 SOCKET=socket_tream
 lista1=[]
 lista2=[]
 lista3=[]
 lista4=[]
 lista5=[]
+lista6=[]
 numarchivo=0
 def on_open(ws):
     print('opened connection')
@@ -39,14 +40,15 @@ def trade_history(ws,msg):
  lista3.append(close)
  lista4.append(high_price)
  lista5.append(low_price)
- #print('len: ',len(lista5))
- print('symbol: ',symbol)
- print('close: ',close)
+ lista6.append(is_candle_closed)
+ print('len: ',len(lista5))
+ #print('symbol: ',symbol)
+ #print('close: ',close)
 
  if len(lista5)==20:
 
 
-     df_lista=pd.DataFrame({'Date': lista1,'symbol': lista2, 'Close': lista3, 'High':lista4, 'Low':lista5,'closed:':is_candle_closed})
+     df_lista=pd.DataFrame({'Date': lista1,'symbol': lista2, 'Close': lista3, 'High':lista4, 'Low':lista5,'closed:':lista6})
      #df_lista.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\out'+str(numarchivo)+'.csv')
      numarchivo=numarchivo+1
      lista1 = []
