@@ -7,7 +7,7 @@ from parametros_bot.sacar_datos_iniciales_multiple_streams2 import datos_inicio
 import telepot
 
 
-socket_tream,df_datos_iniciales,list_simbolos=datos_inicio(1,'15m') #las velas toca cambiar el tiempo desde el archivo
+socket_tream,df_datos_iniciales,list_simbolos=datos_inicio(2,'1m') #las velas toca cambiar el tiempo desde el archivo
 
 lista1=[]
 lista2=[]
@@ -17,12 +17,26 @@ lista5=[]
 lista6=[]
 lista7=[]
 numarchivo=0
+numarchivo_accion=0
+#para df_lista
+len_listas=500
+#para def_datos (rsi, y demas)
+#len_closed=38880
+#N=100
+len_closed=550
+N=100
+#para df_acciones
+#len_acciones=200
+#N2=200
+len_acciones=5
+N2=len_acciones
+df_acciones=pd.DataFrame(columns=['Date','symbol','price','accion'])
 
 
 BB_PERIOD=20
 RSI_PERIOD = 14
-RSI_top=70
-RSI_bot=30
+RSI_top=50
+RSI_bot=45
 client =cliente2
 df_datos=pd.DataFrame(df_datos_iniciales)
 df_datos['RSI']=np.nan
@@ -45,7 +59,7 @@ def on_close(ws):
 
 def trade_history(ws,msg):
 
- global cuenta_compras, cuenta_ventas, df_datos,lista1,lista2,lista3,lista4,lista5,lista6,lista7,numarchivo
+ global cuenta_compras, cuenta_ventas, df_datos,lista1,lista2,lista3,lista4,lista5,lista6,df_acciones,numarchivo,numarchivo_candle,numarchivo_accion
  json_msg=json.loads(msg)
  #print(json_msg)
  json_msg=json_msg['data']
@@ -66,11 +80,12 @@ def trade_history(ws,msg):
 
  #print('symbol: ',symbol)
  #print('close: ',close)
- print('len: ', len(lista5))
- if len(lista5)==50000:
+ print('len lista: ', len(lista5))
 
-     df_lista=pd.DataFrame({'Date': lista1,'symbol': lista2, 'Close': lista3, 'High':lista4, 'Low':lista5,'closed:':lista6,'accion':lista7})
-     #df_lista.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\out'+str(numarchivo)+'.csv')
+ if len(lista5)>=len_listas:
+
+     df_lista=pd.DataFrame({'Date': lista1,'symbol': lista2, 'Close': lista3, 'High':lista4, 'Low':lista5,'closed:':lista6})
+     df_lista.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\out'+str(numarchivo)+'.csv')
      numarchivo=numarchivo+1
      lista1 = []
      lista2 = []
@@ -78,19 +93,20 @@ def trade_history(ws,msg):
      lista4 = []
      lista5 = []
      lista6 = []
-     lista7 = []
+
      print(numarchivo)
-     print('len2: ', len(lista5))
+     print('len lista2: ', len(lista5))
 
 
  if is_candle_closed:
-      print('2len: ',len(df_datos))
-      if len(df_datos)>38880:
+      print('len df_datos: ',len(df_datos))
+      if len(df_datos)>len_closed:
           # Drop first N rows
           # by selecting all rows from N+1th row onwards
-          N = 135*96
+          #N = 135*96
+
           df_datos = df_datos.iloc[N:, :]
-          print('2len2: ', len(df_datos))
+          print('len df_datos2: ', len(df_datos))
 
       ultimos_datos = {'Date': tiempo_actual,'symbol': symbol, 'Close': float(close), 'High': float(high_price), 'Low': float(low_price)}
       df_ultimos_datos=pd.DataFrame(ultimos_datos,index=[0])
@@ -131,29 +147,50 @@ def trade_history(ws,msg):
              bb_low_actual = df_datos['BB_lower'].iloc[-1]
 
 
-             #print(df_datos['symbol'].iloc[-1],rsi_actual)
+             print(df_datos['symbol'].iloc[-1],rsi_actual)
              # venta
-             if rsi_actual > RSI_top and precio_pasado<bb_up_pasado and precio_actual>bb_up_actual:
-                j = 'vender: ' + ' moneda: ' + symbol + ' Precio: ' + str(precio_pasado)
+             if rsi_actual > RSI_top: #and precio_pasado<bb_up_pasado and precio_actual>bb_up_actual:
+                j = 'vender: ' + ' moneda: ' + symbol + ' Precio: ' + str(precio_actual)
                 print(j)
                 bot.sendMessage(chat_id, j)
                 link='https://www.binance.com/es-LA/futures/'+symbol
                 bot.sendMessage(chat_id, link)
-                lista7.append(1)
+                if len(df_acciones)>=len_acciones:
+                    df_acciones['Date'] = pd.to_datetime(df_acciones['Date'], unit='ms')
+                    df_acciones['Date'] = df_acciones['Date'].dt.round('min')
+                    df_acciones.set_index('Date', inplace=True, drop=True)
+                    df_acciones.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\acciones'+str(numarchivo_accion)+'.csv')
+                    numarchivo_accion = numarchivo_accion + 1
+                    #df_acciones = df_datos.iloc[N2:, :]
+                    df_acciones = pd.DataFrame(columns=df_acciones.columns)
+                    print('len acciones2: ',len(df_acciones))
+
+                df_acciones=df_acciones.append({'Date':tiempo_actual,'symbol':symbol,'price':precio_actual,'accion':2},ignore_index=True)
+                print('len acciones: ', len(df_acciones))
 
 
 
              # compra
-             if rsi_actual < RSI_bot and precio_pasado>bb_low_pasado and precio_actual<bb_low_actual:
-                 j = 'comprar: ' + ' moneda: ' + symbol + ' Precio: ' + str(precio_pasado)
+             if rsi_actual < RSI_bot: #and precio_pasado>bb_low_pasado and precio_actual<bb_low_actual:
+                 j = 'comprar: ' + ' moneda: ' + symbol + ' Precio: ' + str(precio_actual)
                  print(j)
                  bot.sendMessage(chat_id, j)
                  link = 'https://www.binance.com/es-LA/futures/' + symbol
                  bot.sendMessage(chat_id, link)
-                 lista7.append(2)
+                 if len(df_acciones) >= len_acciones:
+                     df_acciones['Date'] = pd.to_datetime(df_acciones['Date'], unit='ms')
+                     df_acciones['Date'] = df_acciones['Date'].dt.round('min')
+                     df_acciones.set_index('Date', inplace=True, drop=True)
+                     df_acciones.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\acciones'+str(numarchivo_accion) + '.csv')
+                     numarchivo_accion=numarchivo_accion+1
+                     #a = len_acciones
+                     #df_acciones = df_datos.iloc[N2:, :]
+                     df_acciones = pd.DataFrame(columns=df_acciones.columns)
+                     print('len acciones2: ', len(df_acciones))
 
- else:
-     lista7.append(0)
+                 df_acciones=df_acciones.append({'Date': tiempo_actual, 'symbol': symbol, 'price': precio_actual, 'accion': 1},ignore_index=True)
+                 print('len acciones: ', len(df_acciones))
+ 
 
 
 ws = websocket.WebSocketApp(SOCKET, on_open=on_open, on_close=on_close, on_message=trade_history)
