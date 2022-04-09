@@ -49,7 +49,7 @@ def trade_history(ws,msg):
 
 
      df_lista=pd.DataFrame({'Date': lista1,'symbol': lista2, 'Close': lista3, 'High':lista4, 'Low':lista5})
-     df_lista.to_csv('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\out'+str(numarchivo)+'.csv')
+     df_lista.to_json('C:\\Users\\ANDRES\\Documents\\cryptobot\\multiples_streams\\datos\\out'+str(numarchivo)+'.json')
      numarchivo=numarchivo+1
      lista1 = []
      lista2 = []
